@@ -1,6 +1,6 @@
 # 🔍 Job Scraper Automation
 
-An automated job scraping tool that collects job listings from multiple job boards and sends them to an n8n webhook for further automation (like sending to Google Sheets, email notifications, etc.).
+An automated job scraping tool that collects job listings from multiple job boards and sends them to an n8n webhook for further automation (like sending to Google Sheets, email notifications via SMTP, etc.).
 
 ## 🔄 Two Automation Modes
 
@@ -19,11 +19,11 @@ This project supports **two types of automation workflows**:
 ### 2. 📧 Basic Automation (Free) ✅ **Currently Active**
 - Fetches jobs based on your search parameters
 - Collects all matching jobs from multiple sites
-- Sends results as **CSV file to your email**
+- Sends results as **CSV file to your email via SMTP** (Zoho Mail)
 - No AI filtering - you get all results
 - Best for: Casting a wide net, manual review
 
-**Current workflow:** Jobs are scraped → Sent to n8n webhook → Converted to CSV → Emailed to you
+**Current workflow:** Jobs are scraped → Sent to n8n webhook → Converted to CSV → Emailed to you via SMTP (Zoho)
 
 ---
 
@@ -33,6 +33,7 @@ This project supports **two types of automation workflows**:
 - **India-Focused**: Includes India-specific sites like Naukri and Internshala
 - **Configurable**: Easy configuration via `.env` file
 - **n8n Integration**: Sends scraped jobs directly to n8n webhook
+- **Email Delivery**: Sends job results via SMTP (supports Zoho, Gmail, Outlook, etc.)
 - **Local Backup**: Saves jobs to JSON file as backup
 - **Fresher/Intern Friendly**: Optimized for entry-level job searches
 
@@ -462,7 +463,95 @@ pip install --upgrade certifi
 
 ---
 
-## 📂 Output
+## � Email Configuration (SMTP)
+
+The workflow uses **SMTP** to send emails, which works across platforms including Termux and Docker. No OAuth required!
+
+### Supported Email Providers
+
+| Provider | SMTP Server | Port | Notes |
+|----------|-------------|------|-------|
+| **Zoho Mail** ✅ | smtp.zoho.com | 587 | Currently configured |
+| Gmail | smtp.gmail.com | 587 | Requires App Password |
+| Outlook/Hotmail | smtp-mail.outlook.com | 587 | Works with regular password |
+| Yahoo Mail | smtp.mail.yahoo.com | 587 | Requires App Password |
+| Custom SMTP | Your server | 587/465 | Any SMTP server works |
+
+### How to Configure n8n Workflow for SMTP
+
+1. **Open your n8n workflow** ([BASIC_SCRAPER_WITH_EMAIL.json](BASIC_SCRAPER_WITH_EMAIL.json))
+
+2. **Replace the Gmail OAuth node** with an **SMTP Send Email** node:
+   - Delete the "Send a message" (Gmail) node
+   - Add a new node: Search for **"SMTP"**
+   - Select **"Send Email"** node
+
+3. **Configure SMTP credentials** in n8n:
+   - Click on the SMTP node
+   - Click **"Create New Credentials"**
+   - Enter your settings:
+
+   **For Zoho Mail:**
+   ```
+   User: your-email@zoho.com
+   Password: your-zoho-password
+   Host: smtp.zoho.com
+   Port: 587
+   Security: Use STARTTLS
+   ```
+
+   **For Gmail (with App Password):**
+   ```
+   User: your-email@gmail.com
+   Password: your-16-digit-app-password
+   Host: smtp.gmail.com
+   Port: 587
+   Security: Use STARTTLS
+   ```
+
+   **For Outlook:**
+   ```
+   User: your-email@outlook.com
+   Password: your-password
+   Host: smtp-mail.outlook.com
+   Port: 587
+   Security: Use STARTTLS
+   ```
+
+4. **Configure the email content:**
+   - **To Email**: Your recipient email
+   - **Subject**: `🎯 Found {{ $node["Code in JavaScript2"].json.total_matches }} Job Matches!`
+   - **Text**: Your email body
+   - **Attachments**: Select the CSV file from previous node
+
+### Getting App Passwords (if needed)
+
+**Gmail:**
+1. Enable 2-Step Verification on your Google Account
+2. Go to [App Passwords](https://myaccount.google.com/apppasswords)
+3. Generate a new app password
+4. Use that 16-digit password instead of your regular password
+
+**Yahoo:**
+1. Go to Account Security settings
+2. Generate an app password
+3. Use that password for SMTP
+
+**Zoho:**
+- Use your regular Zoho password (no app password needed)
+- Make sure IMAP/POP access is enabled in settings
+
+### Why SMTP Instead of OAuth?
+
+✅ **Works in Termux/Docker** - No browser authentication required  
+✅ **Cross-platform** - Works on Android, Linux, macOS, Windows  
+✅ **Simple setup** - Just username and password  
+✅ **Reliable** - Standard protocol, widely supported  
+✅ **No token expiry** - Unlike OAuth tokens that expire  
+
+---
+
+## �📂 Output
 
 ### n8n Webhook Payload
 ```json
