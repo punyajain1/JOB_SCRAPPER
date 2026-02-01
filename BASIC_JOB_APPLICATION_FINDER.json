@@ -1,0 +1,148 @@
+{
+  "name": "Job Application Automator",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// 1. Get all accumulated items from the Aggregate node\nconst items = $input.all();\nif (items.length === 0) return { json: { total_matches: 0 } };\n\n// 2. Identify all unique columns (headers)\nconst allKeys = new Set();\nitems.forEach(item => {\n  Object.keys(item.json).forEach(key => allKeys.add(key));\n});\nconst headers = Array.from(allKeys);\n\n// 3. Create the CSV String\nlet csvString = headers.join(\",\") + \"\\n\";\nitems.forEach(item => {\n  const row = headers.map(header => {\n    let value = item.json[header];\n    if (value && typeof value === 'object') value = JSON.stringify(value);\n    const cleanValue = (value === null || value === undefined) \n      ? \"\" \n      : String(value).replace(/\"/g, '\"\"').replace(/\\n/g, \" \");\n    return `\"${cleanValue}\"`;\n  });\n  csvString += row.join(\",\") + \"\\n\";\n});\n\n// 4. Return the data as a Binary File\nreturn {\n  json: {\n    total_matches: items.length,\n    fileName: `Job_Matches_${new Date().toISOString().split('T')[0]}.csv`\n  },\n  binary: {\n    data: {\n      data: Buffer.from(csvString).toString('base64'),\n      mimeType: 'text/csv',\n      fileName: `Job_Matches_${new Date().toISOString().split('T')[0]}.csv`\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        -128
+      ],
+      "id": "5a6cbc4a-39ca-4e03-8191-805c4b4b63d3",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get data from the Webhook node\nconst inputData = $('Webhook - Receive Jobs').first().json;\n\n// 2. Access the 'body' where the jobs are sent\nconst payload = inputData.body;\n\n// 3. Extract the jobs array (defaults to empty array if missing)\nconst jobs = payload.jobs || [];\n\n// 4. Return each job as a separate item with search metadata\nreturn jobs.map(job => ({\n  json: {\n    ...job,\n    search_metadata: {\n      search_term: payload.search_term,\n      location: payload.location,\n      timestamp: payload.timestamp\n    }\n  }\n}));"
+      },
+      "id": "4ff901f4-a244-4002-baee-eec2ef7c18bc",
+      "name": "Extract Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        -128
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "1c8995bb-1ff8-4d12-919d-5dbf668a50e1",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        448,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "job-scraper",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "501ea933-1d35-4d47-8d4d-5151a8d93450",
+      "name": "Webhook - Receive Jobs",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        -128
+      ],
+      "webhookId": "job-scraper"
+    },
+    {
+      "parameters": {
+        "fromEmail": "n8nworkflow@zohomail.in",
+        "toEmail": "punyajain50@gmail.com",
+        "subject": "=🎯 Found {{ $node[\"Code in JavaScript2\"].json.total_matches }} Job Matches!",
+        "html": "=Attached is your daily job match report generated on {{ $now.format('YYYY-MM-DD') }}.",
+        "options": {
+          "attachments": "data"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        992,
+        -128
+      ],
+      "id": "271781b0-bfcb-48d8-a9af-a0f7b69f65e6",
+      "name": "Send email",
+      "webhookId": "7c6ab51b-7a85-4cf3-8f11-2664efbb89e7",
+      "credentials": {
+        "smtp": {
+          "id": "l4hoCMKvvspFX1gA",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Jobs": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Receive Jobs": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "9b31eb42-3fd3-4b52-9138-9e8558bc6a4a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7960d362e2946aa0c95c2e828d4f163ad31d3adaf9ec8ea9320d56b2b75fcaa"
+  },
+  "id": "deAnQPCKYgAi5yHdSs-Um",
+  "tags": []
+}
