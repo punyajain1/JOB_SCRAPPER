@@ -1,0 +1,493 @@
+{
+  "name": "Job Application Automator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "job-scraper",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "87c223fa-0e89-46b2-bf03-9b357410b116",
+      "name": "Webhook - Receive Jobs",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -7600,
+        2384
+      ],
+      "webhookId": "job-scraper"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "68ebd413-5adc-4440-abd2-1aa2474d66a6",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        -7376,
+        2384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get data from the Webhook node\nconst inputData = $('Webhook - Receive Jobs').first().json;\n\n// 2. Access the 'body' where the jobs are sent\nconst payload = inputData.body;\n\n// 3. Extract the jobs array (defaults to empty array if missing)\nconst jobs = payload.jobs || [];\n\n// 4. Return each job as a separate item with search metadata\nreturn jobs.map(job => ({\n  json: {\n    ...job,\n    search_metadata: {\n      search_term: payload.search_term,\n      location: payload.location,\n      timestamp: payload.timestamp\n    }\n  }\n}));"
+      },
+      "id": "8700760e-0ca5-4b7a-aa92-c1fa893c38e2",
+      "name": "Extract Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6704,
+        2384
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const resumeText = $('Extract Resume Text').item.json.text;\nconst job = $input.item.json;\n\nreturn {\n  json: {\n    ...job,\n    resume_content: resumeText\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5776,
+        2400
+      ],
+      "id": "77a1a4f1-bbba-46a4-bc7b-5cf56783525f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemma-3-27b-it",
+          "mode": "list",
+          "cachedResultName": "models/gemma-3-27b-it"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an expert technical recruiter and job matching AI. Your task is to analyze the compatibility between a candidate and a specific job posting.\n\nCANDIDATE RESUME: \n{{ $('Extract Resume Text').item.json.text }}\n\nJOB POSTING:\njob_id: {{ $json.id }}\nTitle: {{ $json.title }}\nCompany: {{ $json.company }}\nDescription: {{ $json.description }}\n\n---\nTASK:\n1. Conduct a deep analysis of the candidate's skills against the job requirements.\n2. Calculate a match score from 0 to 100 based on technical stack, experience level, and role responsibilities.\n3. Identify specific matching skills and critical gaps.\n4. Categorize the final recommendation as \"APPLY\" (score >75), \"MAYBE\" (score 60-75), or \"SKIP\" (score <60).\n\nSTRICT OUTPUT RULES:\n- Respond ONLY with valid JSON.\n- Do not include any markdown formatting (like ```json).\n- Do not include any text outside of the JSON object.\n- If data is missing for a field, use an empty array or \"N/A\".\n\nJSON STRUCTURE:\n{\n  \"match_score\": number,\n  \"job_id\": \"string\",\n  \"recommendation\": \"APPLY|MAYBE|SKIP\"\n}"
+            }
+          ]
+        },
+        "simplify": false,
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -5600,
+        2400
+      ],
+      "id": "0b1f9261-1e32-47d9-95c9-5b0ec8598488",
+      "name": "Message a model",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ni7sL0ozBiH2sRfo",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 1. Access data for the CURRENT item (no .first() needed)\nconst response = $json;\n\n// 2. Safely navigate the nested AI text from your input\nlet rawText = '';\ntry {\n  rawText = response.candidates[0].content.parts[0].text || '';\n} catch (e) {\n  return { verdict: false, error: 'AI Content Path not found' };\n}\n\n// 3. Clean markdown formatting\nconst cleanedText = rawText.replace(/```json|```/g, '').trim();\n\ntry {\n  const aiAnalysis = JSON.parse(cleanedText);\n  \n  // 4. Get the original job data from the 'Extract Jobs' node\n  const jobData = $node[\"Extract Jobs\"].json;\n\n  // 5. Add verdict field based on match_score and recommendation\n  const verdict = (aiAnalysis.match_score >= 75 && aiAnalysis.recommendation === \"APPLY\");\n\n  return {\n    ...jobData,\n    verdict: verdict,\n    match_score: aiAnalysis.match_score,\n    recommendation: aiAnalysis.recommendation\n  };\n} catch (e) {\n  // Return false to prevent workflow crash if JSON is malformed\n  return { \n    verdict: false, \n    error: 'JSON Parsing Failed', \n    raw: rawText \n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5264,
+        2400
+      ],
+      "id": "94ea92b6-dd0e-4a74-a1f0-f5fb96bdba51",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1oMwLllBy-Pxtf_G90xAaJ5kuTOVEBBIK",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "text/plain"
+            }
+          }
+        }
+      },
+      "id": "2698f964-962e-4019-a200-1a4b22b2d303",
+      "name": "Download Resume from Google Docs",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -7152,
+        2384
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T84IwCv13lzBCNNZ",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "id": "b85513b3-6683-4de0-9bab-ceb35f3dd18c",
+      "name": "Extract Resume Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -6928,
+        2384
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {
+          "reset": false
+        }
+      },
+      "id": "bda6e404-d73e-4d99-8359-9f93397168b5",
+      "name": "Loop Over Jobs in Batches of 5",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -6272,
+        2384
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dd3d7dd3-85a3-413e-a64c-442b64feeca1",
+              "leftValue": "={{ $json.verdict }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "00928a75-6960-48ca-9a8a-a29188a9b0aa",
+              "leftValue": "={{ $json.match_score }}",
+              "rightValue": 60,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -5008,
+        2400
+      ],
+      "id": "0382f2e9-cbe1-43a0-826d-7947ca17fa31",
+      "name": "Filter_based on match"
+    },
+    {
+      "parameters": {
+        "sendTo": "punya01155@gmail.com",
+        "subject": "=🎯 Found {{ $node[\"Code in JavaScript2\"].json.total_matches }} Job Matches!",
+        "message": "=Attached is your daily job match report generated on {{ $now.format('YYYY-MM-DD') }}.",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -4400,
+        2208
+      ],
+      "id": "0d21bd30-b2ef-4ea1-bd86-878b621727c7",
+      "name": "Send a message",
+      "webhookId": "b0935a3e-eee6-467c-bc6c-453101c4ec30",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "cljz8cw8Zp3cPs9L",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "maxItems": 10
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -6496,
+        2384
+      ],
+      "id": "eaf56e48-1eff-4387-ae12-1602206f1471",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get all accumulated items from the Aggregate node\nconst items = $input.all();\nif (items.length === 0) return { json: { total_matches: 0 } };\n\n// 2. Identify all unique columns (headers)\nconst allKeys = new Set();\nitems.forEach(item => {\n  Object.keys(item.json).forEach(key => allKeys.add(key));\n});\nconst headers = Array.from(allKeys);\n\n// 3. Create the CSV String\nlet csvString = headers.join(\",\") + \"\\n\";\nitems.forEach(item => {\n  const row = headers.map(header => {\n    let value = item.json[header];\n    if (value && typeof value === 'object') value = JSON.stringify(value);\n    const cleanValue = (value === null || value === undefined) \n      ? \"\" \n      : String(value).replace(/\"/g, '\"\"').replace(/\\n/g, \" \");\n    return `\"${cleanValue}\"`;\n  });\n  csvString += row.join(\",\") + \"\\n\";\n});\n\n// 4. Return the data as a Binary File\nreturn {\n  json: {\n    total_matches: items.length,\n    fileName: `Job_Matches_${new Date().toISOString().split('T')[0]}.csv`\n  },\n  binary: {\n    data: {\n      data: Buffer.from(csvString).toString('base64'),\n      mimeType: 'text/csv',\n      fileName: `Job_Matches_${new Date().toISOString().split('T')[0]}.csv`\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4608,
+        2208
+      ],
+      "id": "e97f9f18-568c-4623-9c92-833da25c7d35",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8500e133-02a3-49d2-8b78-3f605322ff9f",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "={{ $('Extract Jobs').item.json.id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -4880,
+        2224
+      ],
+      "id": "1329ce2a-4abc-42b6-b4c5-d96410aa3320",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "2e59f9cc-a0b5-40d5-9ffc-ba10471591f3",
+      "name": "Wait 1 Second (Rate Limit)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -6016,
+        2400
+      ],
+      "webhookId": "b24ec9ef-9670-4e76-aa1e-cde113221768"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Receive Jobs": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Filter_based on match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Download Resume from Google Docs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Resume from Google Docs": {
+      "main": [
+        [
+          {
+            "node": "Extract Resume Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Resume Text": {
+      "main": [
+        [
+          {
+            "node": "Extract Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Jobs": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Jobs in Batches of 5": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Wait 1 Second (Rate Limit)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter_based on match": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Jobs in Batches of 5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Jobs in Batches of 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1 Second (Rate Limit)": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "e8446325-2d12-4724-95bd-6874ca487eb3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7960d362e2946aa0c95c2e828d4f163ad31d3adaf9ec8ea9320d56b2b75fcaa"
+  },
+  "id": "XdZW0stGOOx0WXxupqKbN",
+  "tags": []
+}

@@ -1,0 +1,555 @@
+{
+  "name": "Job Application Automator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "job-scraper",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ba76b596-5202-420a-97bd-0b2ef8fe4bda",
+      "name": "Webhook - Receive Jobs",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -2448,
+        112
+      ],
+      "webhookId": "job-scraper"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "d1f39bf9-e698-4bd6-a970-d0be77d6eb0e",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        -2208,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get data from the Webhook node\nconst inputData = $('Webhook - Receive Jobs').first().json;\n\n// 2. Access the 'body' where the jobs are sent\nconst payload = inputData.body;\n\n// 3. Extract the jobs array (defaults to empty array if missing)\nconst jobs = payload.jobs || [];\n\n// 4. Return each job as a separate item with search metadata\nreturn jobs.map(job => ({\n  json: {\n    ...job,\n    search_metadata: {\n      search_term: payload.search_term,\n      location: payload.location,\n      timestamp: payload.timestamp\n    }\n  }\n}));"
+      },
+      "id": "9e5fe6ae-c033-470f-be35-981b8ba4cccb",
+      "name": "Extract Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1952,
+        112
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "sendTo": "punya01155@gmail.com",
+        "subject": "=🎯 Found {{ $node[\"Code in JavaScript2\"].json.total_matches }} Job Matches!",
+        "message": "=Attached is your daily job match report generated on {{ $now.format('YYYY-MM-DD') }}.",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -1472,
+        112
+      ],
+      "id": "4febc7ee-2b03-4649-9543-3786d276dbef",
+      "name": "Send a message",
+      "webhookId": "b0935a3e-eee6-467c-bc6c-453101c4ec30",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "cljz8cw8Zp3cPs9L",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get all accumulated items from the Aggregate node\nconst items = $input.all();\nif (items.length === 0) return { json: { total_matches: 0 } };\n\n// 2. Identify all unique columns (headers)\nconst allKeys = new Set();\nitems.forEach(item => {\n  Object.keys(item.json).forEach(key => allKeys.add(key));\n});\nconst headers = Array.from(allKeys);\n\n// 3. Create the CSV String\nlet csvString = headers.join(\",\") + \"\\n\";\nitems.forEach(item => {\n  const row = headers.map(header => {\n    let value = item.json[header];\n    if (value && typeof value === 'object') value = JSON.stringify(value);\n    const cleanValue = (value === null || value === undefined) \n      ? \"\" \n      : String(value).replace(/\"/g, '\"\"').replace(/\\n/g, \" \");\n    return `\"${cleanValue}\"`;\n  });\n  csvString += row.join(\",\") + \"\\n\";\n});\n\n// 4. Return the data as a Binary File\nreturn {\n  json: {\n    total_matches: items.length,\n    fileName: `Job_Matches_${new Date().toISOString().split('T')[0]}.csv`\n  },\n  binary: {\n    data: {\n      data: Buffer.from(csvString).toString('base64'),\n      mimeType: 'text/csv',\n      fileName: `Job_Matches_${new Date().toISOString().split('T')[0]}.csv`\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1728,
+        112
+      ],
+      "id": "fa8af1bb-7a91-41d2-b40c-adc41ca2dde7",
+      "name": "Code in JavaScript2"
+    }
+  ],
+  "pinData": {
+    "Webhook - Receive Jobs": [
+      {
+        "json": {
+          "headers": {
+            "host": "nonamework50.app.n8n.cloud",
+            "user-agent": "python-requests/2.32.3",
+            "content-length": "44659",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "122.162.151.23",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "IN",
+            "cf-ray": "9c6efb0fc7f7302d-DEL",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-forwarded-for": "122.162.151.23, 172.69.152.124",
+            "x-forwarded-host": "nonamework50.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-30-6d57d45df-jbv7d",
+            "x-is-trusted": "yes",
+            "x-real-ip": "122.162.151.23"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "timestamp": "2026-02-01T10:47:08.397786",
+            "search_term": "software engineering intern",
+            "location": "India",
+            "total_jobs": 10,
+            "jobs": [
+              {
+                "id": "gd-1010017186175",
+                "site": "glassdoor",
+                "job_url": "https://www.glassdoor.co.in/job-listing/j?jl=1010017186175",
+                "job_url_direct": null,
+                "title": "Software Engineer – TypeScript, APIs, PostgreSQL",
+                "company": "UniFit Realty",
+                "location": "Gurgaon",
+                "date_posted": "2026-02-01",
+                "job_type": null,
+                "salary_source": "direct_data",
+                "interval": "monthly",
+                "min_amount": 25000,
+                "max_amount": 40000,
+                "currency": "INR",
+                "is_remote": false,
+                "job_level": null,
+                "job_function": null,
+                "listing_type": "organic",
+                "emails": null,
+                "description": null,
+                "company_industry": null,
+                "company_url": null,
+                "company_logo": null,
+                "company_url_direct": null,
+                "company_addresses": null,
+                "company_num_employees": null,
+                "company_revenue": null,
+                "company_description": null,
+                "skills": null,
+                "experience_range": null,
+                "company_rating": null,
+                "company_reviews_count": null,
+                "vacancy_count": null,
+                "work_from_home_type": null
+              },
+              {
+                "id": "gd-1010017127789",
+                "site": "glassdoor",
+                "job_url": "https://www.glassdoor.co.in/job-listing/j?jl=1010017127789",
+                "job_url_direct": null,
+                "title": "Flutter Developer Intern",
+                "company": "Gravit InfoSystems Pvt. Ltd.",
+                "location": "India",
+                "date_posted": "2026-02-01",
+                "job_type": null,
+                "salary_source": null,
+                "interval": null,
+                "min_amount": null,
+                "max_amount": null,
+                "currency": null,
+                "is_remote": false,
+                "job_level": null,
+                "job_function": null,
+                "listing_type": "organic",
+                "emails": null,
+                "description": "**Job description:**\n\n**Key Responsibilities:**\n\n* **Design and Development:** Create high\\-quality mobile applications using \\[iOS/Android/React Native/Flutter/other technologies], following best practices and coding standards.\n* **Collaborate:** Work with cross\\-functional teams including designers, product managers, and other developers to gather requirements and deliver solutions that meet user needs and business objectives.\n* **Testing and Debugging:** Conduct thorough testing of applications to identify and fix bugs, ensuring optimal performance, security, and usability.\n* **Maintenance:** Continuously monitor and maintain applications, making improvements and updates as needed to ensure compatibility with new operating system versions and devices.\n* **Documentation:** Prepare and maintain comprehensive documentation for code, APIs, and application functionality to support development and troubleshooting efforts.\n* **User Experience:** Focus on creating seamless and engaging user experiences by implementing intuitive designs and incorporating user feedback.\n\n**Qualifications:**\n\n* **Experience:** 0\\-1 years of experience in mobile app development, with a strong portfolio of completed projects.\n* **Technical Skills:** Proficiency in \\[iOS development (Swift/Objective\\-C), Android development (Java/Kotlin), React Native, Flutter, etc.]. Familiarity with RESTful APIs, version control systems (e.g., Git), and development tools.\n* **Education:** Bachelor’s degree in Computer Science, Software Engineering, or a related field, or equivalent practical experience.\n* **Problem\\-Solving:** Strong analytical and problem\\-solving skills with the ability to troubleshoot and resolve issues efficiently.\n* **Communication:** Excellent communication skills, with the ability to clearly articulate technical concepts to non\\-technical stakeholders.\n* **Attention to Detail:** A keen eye for detail and a commitment to delivering high\\-quality work.\n\n**Preferred Qualifications:**\n\n* Experience with \\[additional technologies or frameworks relevant to the role].\n* Knowledge of \\[specific industry or domain, if applicable].\n* Experience with Agile/Scrum methodologies.\n\nJob Type: Internship/Full\\-time \\-\n\nEducation:\n\n* Bachelor's (Preferred)\n\nExperience:\n\n* Application development: 1 year (Preferred)\n\nWork Location: On\\-site/Remote\n\nJob Type: Internship\n\nAbility to commute/relocate:\n\n* Govindpuri, Gwalior, Madhya Pradesh: Reliably commute or planning to relocate before starting work (Preferred)\n\nEducation:\n\n* Bachelor's (Preferred)\n\nExperience:\n\n* total work: 1 year (Preferred)\n* software development: 1 year (Preferred)\n\nWork Location: In person",
+                "company_industry": null,
+                "company_url": null,
+                "company_logo": null,
+                "company_url_direct": null,
+                "company_addresses": null,
+                "company_num_employees": null,
+                "company_revenue": null,
+                "company_description": null,
+                "skills": null,
+                "experience_range": null,
+                "company_rating": null,
+                "company_reviews_count": null,
+                "vacancy_count": null,
+                "work_from_home_type": null
+              },
+              {
+                "id": "gd-1010017160411",
+                "site": "glassdoor",
+                "job_url": "https://www.glassdoor.co.in/job-listing/j?jl=1010017160411",
+                "job_url_direct": null,
+                "title": "Software Engineering AMTS",
+                "company": "Salesforce",
+                "location": "Bengaluru",
+                "date_posted": "2026-02-01",
+                "job_type": null,
+                "salary_source": "direct_data",
+                "interval": "yearly",
+                "min_amount": 250000,
+                "max_amount": 960000,
+                "currency": "INR",
+                "is_remote": false,
+                "job_level": null,
+                "job_function": null,
+                "listing_type": "organic",
+                "emails": null,
+                "description": "*To get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.*\n\n**About Futureforce University Recruiting**\n\nOur Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects that affect how our business runs, giving them the opportunity to make a tangible impact on the future of our company. With offices all over the world, our recruits have the chance to collaborate and connect with fellow employees on a global scale. We offer job shadowing, mentorship programs, talent development courses, and much more.\n\n\n**Job Category**\n\nSoftware Engineering\n**Job Details**\n\n**About Salesforce**\n\nSalesforce is the \\#1 AI CRM, where humans with agents drive customer success together. Here, ambition meets action. Tech meets trust. And innovation isn’t a buzzword — it’s a way of life. The world of work as we know it is changing and we're looking for Trailblazers who are passionate about bettering business and the world through AI, driving innovation, and keeping Salesforce's core values at the heart of it all.\n\n\nReady to level\\-up your career at the company leading workforce transformation in the agentic era? You’re in the right place! Agentforce is the future of AI, and you are the future of Salesforce.\n\n\n**Job description \\- Software Engineering AMTS, Tableau**\n=========================================================\n\n**We’re Salesforce, the Customer Company, inspiring the future of business with AI\\+ Data\\+ CRM. Leading with our core values, we help companies across every industry blaze new trails and connect with customers in a whole new way. And, we empower you to be a Trailblazer, too — driving your performance and career growth, charting new paths, and improving the state of the world. If you believe in business as the greatest platform for change and in companies doing well and doing good – you’ve come to the right place.**\n\n**At Tableau, we are on a mission to help people see and understand data. With Tableau we offer our customers an easy\\-to\\-use, self\\-service analytics cloud platform designed to deliver insights where you work. We create intuitive and powerful analytics software that enables thousands of leading organizations and millions of people around the world to find insights in their data. With data governance, security and compliance built in, Tableau offers the most choice and flexibility as your technology and AI strategy evolve. Tableau is committed to supporting the needs of organizations around the world with the largest partner and success ecosystem.**\n\n**We are looking for technically strong** **Software Engineers** **who are passionate about developing, maintaining and releasing high quality software that delights our customers. The software engineer role at Salesforce encompasses architecture, design, implementation, and testing to ensure we build products right and release them with high quality. You will be working with a group of world\\-class engineers to develop key product capabilities, fixing defects and gaps, validating quality and ensuring our customers have highly reliable and scalable products and services. We pride ourselves in writing high\\-quality, maintainable code that strengthens the stability of the product and makes our lives easier. You will collaborate with cross\\-functional teams and ensure the delivery of high\\-quality software solutions that meet our needs. We believe that autonomous teams with the freedom to make decisions will empower the individuals, the product, the company, and the customers they serve to thrive.**\n\n  \n\n**Responsibilities**\n\n* **Development and maintenance of robust and scalable client \\& server\\-side components**\n* **Investigate, troubleshoot and resolve customer defects and production issues with Tableau products in a timely manner.**\n* **Triage and resolve basic, well\\-defined, work items and customer defects with needed guidance.**\n* **Leverage AI tools across the lifecycle of work items**\n* **Analyze product log files, crash dumps, network traces, etc.**\n* **Write code (new development, bug fixes), and automated tests, and ensure adherence to coding standards,quality standards and best practices.**\n* **Develop understanding of how the fixed module integrates with the broader product.**\n* **Learn technologies, design patterns, and Engineering Best Practices.**\n* **Work in a Hybrid Engineering model, collaborating with product managers, architects, and other stakeholders to define technical requirements and specifications.**\n* **Strive to improve your work every sprint by making small changes to your approach.**\n* **Clearly document steps\\-to\\-reproduce, root cause analysis (RCA) findings, logical fix explanations.**\n* **Log and provide timely status updates on assigned work items.**\n* **Transparently share progress and roadblocks with their mentor and senior engineers.**\n\n**Qualifications**\n\n* **Experience B.S/M.S. in Computer Sciences or equivalent field.**\n* **0\\-2** **years of relevant software development experience with deep working expertise primarily in C\\+\\+ 17 or Java 17** **and later** **.**\n* **Experience in other languages like, Javascript, Typescript, C\\# will be good to have**\n* **Experience in software engineering development paradigms and best practices, with high focus on reliability and quality.**\n* **Understanding of architecture principles, design patterns, multithreading, concurrency, queues, locks, scheduling, event\\-driven architecture, workload distribution, along with a deep understanding of relational databases and non\\-relational databases.**\n* **Understanding of object\\-oriented programming**\n* **Understanding of debugging and performance optimization techniques**\n* **Familiarity with relational databases and SQL queries.**\n* **Understanding of Agile methodologies and software engineering best practices including coding standards, SCM, CI, build processes, testing, and operations.**\n* **Excellent problem\\-solving, organizational and analytical skills**\n* **Preferred:** Experience working in enterprise\\-level SaaS products and deploying services on public cloud platforms (GCP, AWS, Azure).\n* **Preferred:** Experience working in large scale distributed systems, working with microservices, container orchestration and/or distributed architecture.\n* **Preferred:** Experience in data processing, data transformation and analytical technologies.\n* **Preferred:** Contributions to personal projects, hackathons, or open\\-source repositories (e.g., GitHub portfolio).\n\nUnleash Your Potential\n\n\nWhen you join Salesforce, you’ll be limitless in all areas of your life. Our benefits and resources support you to find balance and *be your best* , and our AI agents accelerate your impact so you can *do your best* . Together, we’ll bring the power of Agentforce to organizations of all sizes and deliver amazing experiences that customers love. Apply today to not only shape the future — but to redefine what’s possible — for yourself, for AI, and the world.\n\n\nAccommodations\n\n\nIf you require assistance due to a disability applying for open positions please submit a request via this Accommodations Request Form .\n\n\n**Posting Statement**\n\nSalesforce is an equal opportunity employer and maintains a policy of non\\-discrimination with all employees and applicants for employment. What does that mean exactly? It means that at Salesforce, we believe in equality for all. And we believe we can lead the path to equality in part by creating a workplace that’s inclusive, and free from discrimination. Know your rights: workplace discrimination is illegal. Any employee or potential employee will be assessed on the basis of merit, competence and qualifications – without regard to race, religion, color, national origin, sex, sexual orientation, gender expression or identity, transgender status, age, disability, veteran or marital status, political viewpoint, or other classifications protected by law. This policy applies to current and prospective employees, no matter where they are in their Salesforce employment journey. It also applies to recruiting, hiring, job assignment, compensation, promotion, benefits, training, assessment of job performance, discipline, termination, and everything in between. Recruiting, hiring, and promotion decisions at Salesforce are fair and based on merit. The same goes for compensation, benefits, promotions, transfers, reduction in workforce, recall, training, and education.",
+                "company_industry": null,
+                "company_url": "https://www.glassdoor.co.in/Overview/W-EI_IE11159.htm",
+                "company_logo": "https://media.glassdoor.com/sql/11159/salesforce-com-squarelogo-1413910133565.png",
+                "company_url_direct": null,
+                "company_addresses": null,
+                "company_num_employees": null,
+                "company_revenue": null,
+                "company_description": null,
+                "skills": null,
+                "experience_range": null,
+                "company_rating": null,
+                "company_reviews_count": null,
+                "vacancy_count": null,
+                "work_from_home_type": null
+              },
+              {
+                "id": "gd-1010017582330",
+                "site": "glassdoor",
+                "job_url": "https://www.glassdoor.co.in/job-listing/j?jl=1010017582330",
+                "job_url_direct": null,
+                "title": "Front End Developer Intern",
+                "company": "aiforus",
+                "location": "India",
+                "date_posted": "2026-02-01",
+                "job_type": null,
+                "salary_source": "direct_data",
+                "interval": "yearly",
+                "min_amount": 60000,
+                "max_amount": 60000,
+                "currency": "INR",
+                "is_remote": false,
+                "job_level": null,
+                "job_function": null,
+                "listing_type": "organic",
+                "emails": null,
+                "description": null,
+                "company_industry": null,
+                "company_url": null,
+                "company_logo": null,
+                "company_url_direct": null,
+                "company_addresses": null,
+                "company_num_employees": null,
+                "company_revenue": null,
+                "company_description": null,
+                "skills": null,
+                "experience_range": null,
+                "company_rating": null,
+                "company_reviews_count": null,
+                "vacancy_count": null,
+                "work_from_home_type": null
+              },
+              {
+                "id": "in-502c1404e482ae28",
+                "site": "indeed",
+                "job_url": "https://in.indeed.com/viewjob?jk=502c1404e482ae28",
+                "job_url_direct": "http://in.indeed.com/job/front-end-developer-intern-502c1404e482ae28",
+                "title": "Front End Developer Intern",
+                "company": null,
+                "location": "HR, IN",
+                "date_posted": "2026-02-01",
+                "job_type": "parttime, fulltime, internship",
+                "salary_source": null,
+                "interval": null,
+                "min_amount": null,
+                "max_amount": null,
+                "currency": null,
+                "is_remote": true,
+                "job_level": null,
+                "job_function": null,
+                "listing_type": null,
+                "emails": null,
+                "description": "**Role Description**\n\nThis is a remote internship role for a Full Stack Developer. The intern will work collaboratively with the development team on both front\\-end and back\\-end tasks. Responsibilities include writing and testing code, debugging applications, designing user interfaces, and developing software solutions. The role provides an opportunity to gain hands\\-on experience in all aspects of software development while contributing to live projects in a dynamic, innovative environment.\n\n**Qualifications**\n\n* Proficiency in Back\\-End Web Development, including working with server\\-side technologies.\n* Experience in Front\\-End Development and understanding of HTML, CSS, and JavaScript.\n* Knowledge of Full\\-Stack Development workflows and the ability to bridge front\\-end and back\\-end systems.\n* Strong foundation in Software Development, problem\\-solving, and debugging techniques.\n* Ability to learn quickly and adapt to new technologies and tools.\n* Proactive communication skills and ability to collaborate effectively in a remote environment.\n* A degree in Computer Science, Software Engineering, or related field (in progress preferred).\n* Familiarity with frameworks like React, Angular, or Node.js is a plus.\n\nJob Types: Full\\-time, Part\\-time, Fresher, Internship, Freelance  \nContract length: 9 months\n\nPay: From ₹60,000\\.00 per year\n\nExpected hours: No less than 6 per week\n\nBenefits:\n\n* Food provided\n* Paid sick time\n* Work from home\n\nWork Location: Hybrid remote in DLF QE, Gurugram, Haryana",
+                "company_industry": null,
+                "company_url": "https://in.indeed.comNone",
+                "company_logo": null,
+                "company_url_direct": null,
+                "company_addresses": null,
+                "company_num_employees": null,
+                "company_revenue": null,
+                "company_description": null,
+                "skills": null,
+                "experience_range": null,
+                "company_rating": null,
+                "company_reviews_count": null,
+                "vacancy_count": null,
+                "work_from_home_type": null
+              },
+              {
+                "id": "in-07f40b091cdbbaa4",
+                "site": "indeed",
+                "job_url": "https://in.indeed.com/viewjob?jk=07f40b091cdbbaa4",
+                "job_url_direct": "http://in.indeed.com/job/software-engineer-typescript-apis-postgresql-07f40b091cdbbaa4",
+                "title": "Software Engineer – TypeScript, APIs, PostgreSQL",
+                "company": "UniFit India",
+                "location": "HR, IN",
+                "date_posted": "2026-01-31",
+                "job_type": "fulltime",
+                "salary_source": null,
+                "interval": null,
+                "min_amount": null,
+                "max_amount": null,
+                "currency": null,
+                "is_remote": false,
+                "job_level": null,
+                "job_function": null,
+                "listing_type": null,
+                "emails": null,
+                "description": "**Software Developer – Real Estate Tech Platform**\n\n**Job Description** \n\n**About the Company**\n\nWe are building a modern **Real Estate Technology (PropTech) platform** focused on intelligent automation, user experience, and fast execution. This is a **product\\-driven platform**, not a traditional property listing website.\n\n**Role Overview**\n\nWe are hiring a **Full Stack Developer** who has **a minimum of 1 year of hands\\-on experience in development work**. ( preferably using Cursor.ai)\n\nThis role requires an **AI\\-first development mindset**, strong fundamentals, and the ability to ship features quickly in a startup environment.\n\n**Must\\-Have Skills (Deal Breakers)**\n\n**Please apply only if you are comfortable with ALL of the following:**\n\n* **TypeScript**\n* Writing and reading TypeScript code\n* Understanding async/await, Promises, and basic error handling\n* **APIs**\n* Solid understanding of REST APIs (GET, POST, PUT, PATCH, DELETE)\n* Experience consuming APIs from the frontend (fetch, Axios, etc.)\n* Understanding request/response structure and status codes\n* **PostgreSQL**\n* Writing basic SQL queries (SELECT, INSERT, UPDATE, WHERE, JOINs)\n* Understanding tables, relationships, and keys\n* Prior hands\\-on experience with Postgres or another SQL database\n\n**If you do not have working knowledge of Postgres, TypeScript, and APIs, this role will not be a fit.**\n\n**Key Responsibilities**\n\n* Build and maintain frontend and backend features of the platform\n* Use **Cursor.ai** to accelerate feature development and code refactoring\n* Translate product ideas into scalable technical solutions\n* Integrate third\\-party APIs (CRM, WhatsApp, payments, automation tools)\n* Ensure performance, security, and code quality standards\n* Work closely with founders on product improvements\n\n**What You’ll Do**\n\n* Build and ship product features in a shared codebase\n* Fix bugs and improve performance, reliability, and maintainability\n* Own specific technical areas (e.g., reducing duplicate logic, improving APIs, adding tests or observability)\n* Work across the stack:\n* **Frontend:** React, Next.js, TypeScript\n* **Backend:** APIs, background jobs, data flows\n* **Database:** Postgres and SQL queries\n* Participate fully in engineering practices:\n* Code reviews\n* Deployments\n* Balancing speed with quality\n\nYou will be treated as a **full member of the engineering team**, not a passive intern.\n\n**Required Skills (Technical)**\n\n* **JavaScript / TypeScript**\n* Comfortable writing and reading code\n* Familiar with async/await, Promises, and basic error handling\n* **React**\n* Experience with components, hooks (useState, useEffect)\n* Handling forms and client\\-side state is a plus\n* **APIs**\n* Understanding of REST APIs (GET, POST, PUT, PATCH, DELETE)\n* Experience calling APIs using fetch or libraries like Axios\n* **Databases**\n* Basic SQL (SELECT, INSERT, UPDATE, WHERE, JOINs)\n* Understanding tables, keys, and relationships\n* Postgres experience preferred\n* **Git**\n* Branching, committing, pushing/pulling, and resolving simple merge conflicts\n* **Developer Tooling**\n* Comfortable with a code editor, terminal/CLI, and running projects locally\n\n**Job Type \\& Location**\n\n* Full\\-time\n* Gurgaon\n\n**Compensation**\n\n* Competitive salary based on experience\n* Long\\-term growth opportunities\n\n**How to Apply**\n\nCandidates may be asked to:\n\n* Share examples of projects where **Cursor.ai** was used extensively\n* Complete a short practical task using Cursor.ai\n\nJob Types: Full\\-time, Permanent\n\nPay: ₹25,000\\.00 \\- ₹40,000\\.00 per month\n\nApplication Question(s):\n\n* Which of the following best describes your experience with TypeScript?\n\nAnswer options (single choice):\n\nI regularly write TypeScript and understand types, interfaces, and async/await\n\nI have used TypeScript a little but mostly write JavaScript\n\nI have only read TypeScript code\n\nI have not used TypeScrip\n\n* You are calling a backend API from a frontend app. Which HTTP method would you typically use to update part of an existing record?\n\nAnswer options:\n\nGET\n\nPOST\n\nPATCH\n\nDELETE\n\n* Have you ever consumed a REST API from a frontend application (using fetch, Axios, etc.)?\n\nAnswer options:\n\nYes, multiple times in real projects\n\nYes, once or twice while learning\n\nOnly in tutorials\n\nNo\n\n* What best describes your experience with PostgreSQL or another SQL database?\n\nAnswer options:\n\nI’ve written real queries (SELECT, INSERT, UPDATE, JOINs) in projects\n\nI understand SQL basics but haven’t used it much\n\nI’ve only seen SQL in tutorials\n\nI have no SQL experience\n\n* When an API request fails with a 500 error, what do you usually do first?\n\nAnswer options:\n\nCheck server logs or error messages to identify the cause\n\nRetry the request multiple times\n\nAssume it’s a frontend issue\n\nAsk someone else to fix it\n\n* Briefly describe one feature or bug you worked on that involved TypeScript, an API, and a database.\n\n(2–4 sentences)\n\nWork Location: In person",
+                "company_industry": null,
+                "company_url": "https://in.indeed.com/cmp/Unifit-India",
+                "company_logo": "https://d2q79iu7y748jz.cloudfront.net/s/_squarelogo/256x256/ed690225fdffd26b6bef6a36bcd909eb",
+                "company_url_direct": null,
+                "company_addresses": null,
+                "company_num_employees": null,
+                "company_revenue": null,
+                "company_description": "Unifit Realty is a PropTech company based out of Gurgaon, redefining the way people discover and experience real estate. Blending technology, data intelligence, and human expertise.",
+                "skills": null,
+                "experience_range": null,
+                "company_rating": null,
+                "company_reviews_count": null,
+                "vacancy_count": null,
+                "work_from_home_type": null
+              },
+              {
+                "id": "in-a94b9e75558ab6c5",
+                "site": "indeed",
+                "job_url": "https://in.indeed.com/viewjob?jk=a94b9e75558ab6c5",
+                "job_url_direct": "https://salesforce.wd12.myworkdayjobs.com/en-US/External_Career_Site/job/India---Bangalore/Software-Engineering-AMTS_JR327768",
+                "title": "Software Engineering AMTS",
+                "company": "Salesforce",
+                "location": "KA, IN",
+                "date_posted": "2026-01-31",
+                "job_type": "fulltime",
+                "salary_source": null,
+                "interval": null,
+                "min_amount": null,
+                "max_amount": null,
+                "currency": null,
+                "is_remote": false,
+                "job_level": null,
+                "job_function": null,
+                "listing_type": null,
+                "emails": null,
+                "description": "*To get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.*\n\n**About Futureforce University Recruiting**\n\nOur Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects that affect how our business runs, giving them the opportunity to make a tangible impact on the future of our company. With offices all over the world, our recruits have the chance to collaborate and connect with fellow employees on a global scale. We offer job shadowing, mentorship programs, talent development courses, and much more.\n\n\n**Job Category**\n\nSoftware Engineering\n**Job Details**\n\n**About Salesforce**\n\nSalesforce is the \\#1 AI CRM, where humans with agents drive customer success together. Here, ambition meets action. Tech meets trust. And innovation isn’t a buzzword — it’s a way of life. The world of work as we know it is changing and we're looking for Trailblazers who are passionate about bettering business and the world through AI, driving innovation, and keeping Salesforce's core values at the heart of it all.\n\n\nReady to level\\-up your career at the company leading workforce transformation in the agentic era? You’re in the right place! Agentforce is the future of AI, and you are the future of Salesforce.\n\n\n**Job description \\- Software Engineering AMTS, Tableau**\n=========================================================\n\n**We’re Salesforce, the Customer Company, inspiring the future of business with AI\\+ Data\\+ CRM. Leading with our core values, we help companies across every industry blaze new trails and connect with customers in a whole new way. And, we empower you to be a Trailblazer, too — driving your performance and career growth, charting new paths, and improving the state of the world. If you believe in business as the greatest platform for change and in companies doing well and doing good – you’ve come to the right place.**\n\n**At Tableau, we are on a mission to help people see and understand data. With Tableau we offer our customers an easy\\-to\\-use, self\\-service analytics cloud platform designed to deliver insights where you work. We create intuitive and powerful analytics software that enables thousands of leading organizations and millions of people around the world to find insights in their data. With data governance, security and compliance built in, Tableau offers the most choice and flexibility as your technology and AI strategy evolve. Tableau is committed to supporting the needs of organizations around the world with the largest partner and success ecosystem.**\n\n**We are looking for technically strong** **Software Engineers** **who are passionate about developing, maintaining and releasing high quality software that delights our customers. The software engineer role at Salesforce encompasses architecture, design, implementation, and testing to ensure we build products right and release them with high quality. You will be working with a group of world\\-class engineers to develop key product capabilities, fixing defects and gaps, validating quality and ensuring our customers have highly reliable and scalable products and services. We pride ourselves in writing high\\-quality, maintainable code that strengthens the stability of the product and makes our lives easier. You will collaborate with cross\\-functional teams and ensure the delivery of high\\-quality software solutions that meet our needs. We believe that autonomous teams with the freedom to make decisions will empower the individuals, the product, the company, and the customers they serve to thrive.**\n\n  \n\n**Responsibilities**\n\n* **Development and maintenance of robust and scalable client \\& server\\-side components**\n* **Investigate, troubleshoot and resolve customer defects and production issues with Tableau products in a timely manner.**\n* **Triage and resolve basic, well\\-defined, work items and customer defects with needed guidance.**\n* **Leverage AI tools across the lifecycle of work items**\n* **Analyze product log files, crash dumps, network traces, etc.**\n* **Write code (new development, bug fixes), and automated tests, and ensure adherence to coding standards,quality standards and best practices.**\n* **Develop understanding of how the fixed module integrates with the broader product.**\n* **Learn technologies, design patterns, and Engineering Best Practices.**\n* **Work in a Hybrid Engineering model, collaborating with product managers, architects, and other stakeholders to define technical requirements and specifications.**\n* **Strive to improve your work every sprint by making small changes to your approach.**\n* **Clearly document steps\\-to\\-reproduce, root cause analysis (RCA) findings, logical fix explanations.**\n* **Log and provide timely status updates on assigned work items.**\n* **Transparently share progress and roadblocks with their mentor and senior engineers.**\n\n**Qualifications**\n\n* **Experience B.S/M.S. in Computer Sciences or equivalent field.**\n* **0\\-2** **years of relevant software development experience with deep working expertise primarily in C\\+\\+ 17 or Java 17** **and later** **.**\n* **Experience in other languages like, Javascript, Typescript, C\\# will be good to have**\n* **Experience in software engineering development paradigms and best practices, with high focus on reliability and quality.**\n* **Understanding of architecture principles, design patterns, multithreading, concurrency, queues, locks, scheduling, event\\-driven architecture, workload distribution, along with a deep understanding of relational databases and non\\-relational databases.**\n* **Understanding of object\\-oriented programming**\n* **Understanding of debugging and performance optimization techniques**\n* **Familiarity with relational databases and SQL queries.**\n* **Understanding of Agile methodologies and software engineering best practices including coding standards, SCM, CI, build processes, testing, and operations.**\n* **Excellent problem\\-solving, organizational and analytical skills**\n* **Preferred:** Experience working in enterprise\\-level SaaS products and deploying services on public cloud platforms (GCP, AWS, Azure).\n* **Preferred:** Experience working in large scale distributed systems, working with microservices, container orchestration and/or distributed architecture.\n* **Preferred:** Experience in data processing, data transformation and analytical technologies.\n* **Preferred:** Contributions to personal projects, hackathons, or open\\-source repositories (e.g., GitHub portfolio).\n\nUnleash Your Potential\n\n\nWhen you join Salesforce, you’ll be limitless in all areas of your life. Our benefits and resources support you to find balance and *be your best* , and our AI agents accelerate your impact so you can *do your best* . Together, we’ll bring the power of Agentforce to organizations of all sizes and deliver amazing experiences that customers love. Apply today to not only shape the future — but to redefine what’s possible — for yourself, for AI, and the world.\n\n\nAccommodations\n\n\nIf you require assistance due to a disability applying for open positions please submit a request via this Accommodations Request Form .\n\n\n**Posting Statement**\n\nSalesforce is an equal opportunity employer and maintains a policy of non\\-discrimination with all employees and applicants for employment. What does that mean exactly? It means that at Salesforce, we believe in equality for all. And we believe we can lead the path to equality in part by creating a workplace that’s inclusive, and free from discrimination. Know your rights: workplace discrimination is illegal. Any employee or potential employee will be assessed on the basis of merit, competence and qualifications – without regard to race, religion, color, national origin, sex, sexual orientation, gender expression or identity, transgender status, age, disability, veteran or marital status, political viewpoint, or other classifications protected by law. This policy applies to current and prospective employees, no matter where they are in their Salesforce employment journey. It also applies to recruiting, hiring, job assignment, compensation, promotion, benefits, training, assessment of job performance, discipline, termination, and everything in between. Recruiting, hiring, and promotion decisions at Salesforce are fair and based on merit. The same goes for compensation, benefits, promotions, transfers, reduction in workforce, recall, training, and education.",
+                "company_industry": null,
+                "company_url": "https://in.indeed.com/cmp/Salesforce",
+                "company_logo": "https://d2q79iu7y748jz.cloudfront.net/s/_squarelogo/256x256/581b81cad76664246c42f85c30523dd2",
+                "company_url_direct": "http://www.salesforce.com",
+                "company_addresses": "San Francisco, CA",
+                "company_num_employees": "10,000+",
+                "company_revenue": "more than $10B (USD)",
+                "company_description": "Salesforce is the customer company. We make cloud-based software designed to help businesses connect to their customers in a whole new way.",
+                "skills": null,
+                "experience_range": null,
+                "company_rating": null,
+                "company_reviews_count": null,
+                "vacancy_count": null,
+                "work_from_home_type": null
+              },
+              {
+                "id": "in-f1431119b31eca8f",
+                "site": "indeed",
+                "job_url": "https://in.indeed.com/viewjob?jk=f1431119b31eca8f",
+                "job_url_direct": "http://in.indeed.com/job/flutter-developer-intern-f1431119b31eca8f",
+                "title": "Flutter Developer Intern",
+                "company": "Gravit InfoSystems Pvt. Ltd.",
+                "location": "MP, IN",
+                "date_posted": "2026-01-31",
+                "job_type": "internship",
+                "salary_source": null,
+                "interval": null,
+                "min_amount": null,
+                "max_amount": null,
+                "currency": null,
+                "is_remote": true,
+                "job_level": null,
+                "job_function": null,
+                "listing_type": null,
+                "emails": null,
+                "description": "**Job description:**\n\n**Key Responsibilities:**\n\n* **Design and Development:** Create high\\-quality mobile applications using \\[iOS/Android/React Native/Flutter/other technologies], following best practices and coding standards.\n* **Collaborate:** Work with cross\\-functional teams including designers, product managers, and other developers to gather requirements and deliver solutions that meet user needs and business objectives.\n* **Testing and Debugging:** Conduct thorough testing of applications to identify and fix bugs, ensuring optimal performance, security, and usability.\n* **Maintenance:** Continuously monitor and maintain applications, making improvements and updates as needed to ensure compatibility with new operating system versions and devices.\n* **Documentation:** Prepare and maintain comprehensive documentation for code, APIs, and application functionality to support development and troubleshooting efforts.\n* **User Experience:** Focus on creating seamless and engaging user experiences by implementing intuitive designs and incorporating user feedback.\n\n**Qualifications:**\n\n* **Experience:** 0\\-1 years of experience in mobile app development, with a strong portfolio of completed projects.\n* **Technical Skills:** Proficiency in \\[iOS development (Swift/Objective\\-C), Android development (Java/Kotlin), React Native, Flutter, etc.]. Familiarity with RESTful APIs, version control systems (e.g., Git), and development tools.\n* **Education:** Bachelor’s degree in Computer Science, Software Engineering, or a related field, or equivalent practical experience.\n* **Problem\\-Solving:** Strong analytical and problem\\-solving skills with the ability to troubleshoot and resolve issues efficiently.\n* **Communication:** Excellent communication skills, with the ability to clearly articulate technical concepts to non\\-technical stakeholders.\n* **Attention to Detail:** A keen eye for detail and a commitment to delivering high\\-quality work.\n\n**Preferred Qualifications:**\n\n* Experience with \\[additional technologies or frameworks relevant to the role].\n* Knowledge of \\[specific industry or domain, if applicable].\n* Experience with Agile/Scrum methodologies.\n\nJob Type: Internship/Full\\-time \\-\n\nEducation:\n\n* Bachelor's (Preferred)\n\nExperience:\n\n* Application development: 1 year (Preferred)\n\nWork Location: On\\-site/Remote\n\nJob Type: Internship\n\nAbility to commute/relocate:\n\n* Govindpuri, Gwalior, Madhya Pradesh: Reliably commute or planning to relocate before starting work (Preferred)\n\nEducation:\n\n* Bachelor's (Preferred)\n\nExperience:\n\n* total work: 1 year (Preferred)\n* software development: 1 year (Preferred)\n\nWork Location: In person",
+                "company_industry": null,
+                "company_url": "https://in.indeed.com/cmp/Gravit-Infosystems-Pvt.-Ltd.",
+                "company_logo": null,
+                "company_url_direct": null,
+                "company_addresses": null,
+                "company_num_employees": null,
+                "company_revenue": null,
+                "company_description": null,
+                "skills": null,
+                "experience_range": null,
+                "company_rating": null,
+                "company_reviews_count": null,
+                "vacancy_count": null,
+                "work_from_home_type": null
+              },
+              {
+                "id": "li-4357041343",
+                "site": "linkedin",
+                "job_url": "https://www.linkedin.com/jobs/view/4357041343",
+                "job_url_direct": null,
+                "title": "Software Engineer Intern",
+                "company": "Hema AI",
+                "location": "",
+                "date_posted": null,
+                "job_type": "internship",
+                "salary_source": null,
+                "interval": null,
+                "min_amount": null,
+                "max_amount": null,
+                "currency": null,
+                "is_remote": true,
+                "job_level": "internship",
+                "job_function": "Engineering and Information Technology",
+                "listing_type": null,
+                "emails": "info@tryhema.com",
+                "description": "About Hema AI\n \n Hema AI is an AI\\-driven technology company focused on building intelligent products that simplify workflows and enable smarter decision\\-making. Our products are built using modern software engineering practices with a strong emphasis on scalability, performance, and reliability.\n \n\n\n\n  \n\n\n\n\n Role Overview\n \n We are looking for a Software Engineer Intern to support the design, development, and maintenance of scalable software systems. The intern will work closely with frontend, backend, and AI teams to build and improve core product features across the stack.\n \n\n\n\n  \n\n\n\n\n Key Responsibilities\n * Assist in designing, developing, and testing software applications and services\n* Write clean, maintainable, and efficient code following best practices\n* Collaborate with cross\\-functional teams to implement product requirements\n* Work with APIs, databases, and system integrations\n* Debug issues, optimize performance, and improve system reliability\n* Participate in code reviews and engineering discussions\n\n\n\n  \n\n\n\n\n Required Qualifications\n * Strong understanding of computer science fundamentals (data structures, algorithms, OOP)\n* Proficiency in at least one programming language (JavaScript, Python, Java, or similar)\n* Basic understanding of web technologies and backend concepts\n* Familiarity with RESTful APIs\n* Experience using Git or other version control systems\n\n\n\n  \n\n\n\n\n Preferred Qualifications\n * Exposure to frontend frameworks (React, Next.js) or backend frameworks (Node.js, Django, FastAPI)\n* Basic knowledge of databases (SQL or NoSQL)\n* Interest in AI, machine learning, or scalable systems\n* Prior internship, academic projects, or open\\-source contributions\n\n\n\n  \n\n\n\n\n What We Offer\n * Paid internship with ownership of real product features\n* Fully remote and flexible work environment\n* Mentorship from experienced software engineers\n* Exposure to production systems and AI\\-powered applications\n* Opportunity for full\\-time employment based on performance\n\n\n\n  \n\n\n\n\n Application Process\n \n Interested candidates should submit their resume along with relevant project links or a GitHub profile to:\n **info@tryhema.com**",
+                "company_industry": "Technology, Information and Internet",
+                "company_url": "https://www.linkedin.com/company/tryhema",
+                "company_logo": "https://media.licdn.com/dms/image/v2/D560BAQHymRHbQvqDVQ/company-logo_100_100/B56ZvkR6AnJIAY-/0/1769061459736/tryhema_logo?e=2147483647&v=beta&t=nvouwsoJ-dW68YUba0lUQQvo-t3AKbepBBXij4uGARM",
+                "company_url_direct": null,
+                "company_addresses": null,
+                "company_num_employees": null,
+                "company_revenue": null,
+                "company_description": null,
+                "skills": null,
+                "experience_range": null,
+                "company_rating": null,
+                "company_reviews_count": null,
+                "vacancy_count": null,
+                "work_from_home_type": null
+              },
+              {
+                "id": "li-4357041346",
+                "site": "linkedin",
+                "job_url": "https://www.linkedin.com/jobs/view/4357041346",
+                "job_url_direct": null,
+                "title": "Java Intern",
+                "company": "Hema AI",
+                "location": "",
+                "date_posted": null,
+                "job_type": "internship",
+                "salary_source": null,
+                "interval": null,
+                "min_amount": null,
+                "max_amount": null,
+                "currency": null,
+                "is_remote": true,
+                "job_level": "internship",
+                "job_function": "Engineering and Information Technology",
+                "listing_type": null,
+                "emails": "info@tryhema.com",
+                "description": "About Hema AI\n \n Hema AI is an AI\\-focused technology company building intelligent, scalable software products. We leverage modern engineering practices and robust backend systems to support high\\-performance, AI\\-driven applications.\n \n\n\n\n  \n\n\n\n\n Role Overview\n \n We are seeking a Java Intern to assist in the development, testing, and maintenance of backend systems and services. The intern will work with experienced engineers to build reliable, scalable, and secure Java\\-based applications.\n \n\n\n\n  \n\n\n\n\n Key Responsibilities\n * Develop and maintain backend services using Java\n* Assist in designing and implementing RESTful APIs\n* Write clean, efficient, and maintainable code following best practices\n* Participate in debugging, testing, and performance optimization\n* Work with databases and backend integrations\n* Collaborate with cross\\-functional engineering teams\n* Contribute to code reviews and technical documentation\n\n\n\n  \n\n\n\n\n Required Qualifications\n * Strong fundamentals in Java and object\\-oriented programming\n* Understanding of data structures and basic algorithms\n* Familiarity with backend development concepts\n* Basic knowledge of REST APIs and HTTP protocols\n* Experience with Git or other version control tools\n\n\n\n  \n\n\n\n\n Preferred Qualifications\n * Exposure to Spring Boot or similar Java frameworks\n* Basic knowledge of SQL and relational databases\n* Understanding of microservices architecture\n* Academic projects, internships, or hands\\-on backend development experience\n\n\n\n  \n\n\n\n\n What We Offer\n * Paid internship with real\\-world backend engineering exposure\n* Fully remote work environment\n* Mentorship from experienced backend and platform engineers\n* Opportunity to work on production\\-grade systems\n* Potential for full\\-time employment based on performance\n\n\n\n  \n\n\n\n\n Application Process\n \n Interested candidates may apply by sending their resume and relevant project details or GitHub profile to:\n **info@tryhema.com**",
+                "company_industry": "Technology, Information and Internet",
+                "company_url": "https://www.linkedin.com/company/tryhema",
+                "company_logo": "https://media.licdn.com/dms/image/v2/D560BAQHymRHbQvqDVQ/company-logo_100_100/B56ZvkR6AnJIAY-/0/1769061459736/tryhema_logo?e=2147483647&v=beta&t=nvouwsoJ-dW68YUba0lUQQvo-t3AKbepBBXij4uGARM",
+                "company_url_direct": null,
+                "company_addresses": null,
+                "company_num_employees": null,
+                "company_revenue": null,
+                "company_description": null,
+                "skills": null,
+                "experience_range": null,
+                "company_rating": null,
+                "company_reviews_count": null,
+                "vacancy_count": null,
+                "work_from_home_type": null
+              }
+            ]
+          },
+          "webhookUrl": "https://nonamework50.app.n8n.cloud/webhook-test/job-scraper",
+          "executionMode": "test"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook - Receive Jobs": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Jobs": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "18b97318-8bb2-4941-9714-7fbf22f2fe3d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7960d362e2946aa0c95c2e828d4f163ad31d3adaf9ec8ea9320d56b2b75fcaa"
+  },
+  "id": "XdZW0stGOOx0WXxupqKbN",
+  "tags": []
+}
