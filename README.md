@@ -493,7 +493,7 @@ Jobs are also saved locally as `jobs_backup_YYYYMMDD_HHMM.json`
 
 ## 📜 Credits & License
 
-**Built with ❤️ by [Punya Jain](https://github.com/punyajain)**
+**Built with ❤️ by [Punya Jain](https://github.com/punyajain1)**
 
 Special thanks to **[JobSpy](https://github.com/Bunsly/JobSpy)** for providing the amazing job scraping library that powers this automation.
 
