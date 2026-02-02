@@ -39,7 +39,7 @@ except Exception as e:
     print(f"⚠️ Warning: Could not apply SSL fix: {e}")
 
 # Use local JobSpy-main folder instead of installed package
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'JobSpy-main'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'JobSpy-main_new'))
 from jobspy import scrape_jobs
 import json
 import sys
